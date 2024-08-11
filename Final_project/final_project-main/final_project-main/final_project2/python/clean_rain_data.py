@@ -1,40 +1,27 @@
 import os
-import subprocess
-import sys
-
-# ตรวจสอบและติดตั้ง openpyxl หากยังไม่ได้ติดตั้ง
-try:
-    import openpyxl
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
-
 import pandas as pd
 
-# ตรวจสอบโฟลเดอร์ทำงานปัจจุบัน
-print(f"Current working directory: {os.getcwd()}")
-
-# List of Excel files to process
-excel_files = [
-    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_excel_original\Rain-N1-2003-1998.xlsx',
-    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_excel_original\Rain-N1-2013-2004.xlsx',
-    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_excel_original\Rain-N1-2023-2014.xlsx',
-    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_excel_original\Rain-N2-2003-1998.xlsx',
-    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_excel_original\Rain-N2-2013-2004.xlsx',
-    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_excel_original\Rain-N2-2023-2014.xlsx'
+csv_files = [
+    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_csv_original\Rain-N1-2003-1998.csv',
+    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_csv_original\Rain-N1-2013-2004.csv',
+    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_csv_original\Rain-N1-2023-2014.csv',
+    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_csv_original\Rain-N2-2003-1998.csv',
+    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_csv_original\Rain-N2-2013-2004.csv',
+    r'C:\Users\ASUS\Documents\Final_project\final_project-main\final_project-main\final_project2\data\rain_csv_original\Rain-N2-2023-2014.csv'
 ]
 
 # Loop through each Excel file
-for file_path in excel_files:
+for file_path in csv_files:
     if os.path.exists(file_path):
         try:
             # Load data from Excel
-            rain = pd.read_excel(file_path)
+            rain = pd.read_csv(file_path)
 
             # Drop rows with NaN values
             rain_dropna = rain.dropna()
 
             # Convert 'Unnamed: 2' column to datetime and then to date
-            rain_dropna['Unnamed: 2'] = pd.to_datetime(rain_dropna['Unnamed: 2'], errors='coerce').dt.date
+            rain_dropna.loc[:, 'Unnamed: 2'] = pd.to_datetime(rain_dropna['Unnamed: 2'], errors='coerce').dt.date
 
             # Rename columns
             rain_dropna.rename(columns={
@@ -81,8 +68,8 @@ for file_path in excel_files:
             # Drop 'station' column as it's no longer needed
             rain_dropna = rain_dropna.drop(columns=['station'])
 
-            # Convert 'month_year' column to "01-1998" format using .strftime()
-            rain_dropna['month_year'] = rain_dropna['month_year'].apply(lambda x: x.strftime('%m-%Y'))
+            # Convert 'month_year' column to "01-1998" format using .strftime(), handling NaT values
+            rain_dropna['month_year'] = rain_dropna['month_year'].apply(lambda x: x.strftime('%m-%Y') if pd.notna(x) else 'NaT')
 
             # Reorder columns
             new_columns = ['no', 'station_id', 'station_name', 'month_year', 'day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'day7',
@@ -92,22 +79,34 @@ for file_path in excel_files:
 
             # Replace '-' and 'T' with 0 in all columns
             for col in rain_dropna.columns:
-                rain_dropna[col] = rain_dropna[col].apply(lambda x: 0 if x == '-' or x == 'T' else x)
+                rain_dropna.loc[:, col] = rain_dropna[col].apply(lambda x: 0 if x == '-' or x == 'T' else x)
 
             # Print first 10 rows of processed DataFrame
             print(rain_dropna.head(10))
 
             # Create folder for saving Excel files if it doesn't exist
-            save_folder_path = r'C:\Users\ASUS\Documents\Final_project\data\save_excel'
-            os.makedirs(save_folder_path, exist_ok=True)
+            #save_folder_path = r'C:\Users\ASUS\Documents\Final_project\data\save_excel'
+            #os.makedirs(save_folder_path, exist_ok=True)
 
-            # Generate file name for output Excel file
-            file_name = os.path.basename(file_path)
-            excel_file_path = os.path.join(save_folder_path, file_name)
+            #  Generate file name for outputExcel file
+            #file_name = os.path.basename(file_path).replace('.csv', '.xlsx')
+            #excel_file_path = os.path.join(save_folder_path, file_name)
 
             # Save processed DataFrame to Excel file
-            rain_dropna.to_excel(excel_file_path, index=False, engine='openpyxl')
-            print(f"DataFrame saved to: {excel_file_path}")
+           #rain_dropna.to_excel(excel_file_path, index=False, engine='openpyxl')
+           # print(f"DataFrame saved to: {excel_file_path}")
+
+            # Create folder for saving CSV files if it doesn't exist
+            save_folder_path = r'C:\Users\ASUS\Documents\Final_project\data\save_csv'
+            os.makedirs(save_folder_path, exist_ok=True)
+
+            # Generate file name for output CSV file
+            file_name = os.path.basename(file_path).replace('.xlsx', '.csv')  # Replace the extension
+            csv_file_path = os.path.join(save_folder_path, file_name)
+
+            # Save processed DataFrame to CSV file
+            rain_dropna.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+            print(f"DataFrame saved to: {csv_file_path}")
 
         except FileNotFoundError as e:
             print(f"Error: {e}")
